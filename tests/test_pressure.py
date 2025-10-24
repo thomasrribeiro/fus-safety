@@ -9,7 +9,7 @@ from kwave.kgrid import kWaveGrid
 from kwave.kmedium import kWaveMedium
 from kwave.ksensor import kSensor
 from kwave.ksource import kSource
-from kwave.kspaceFirstOrder3D import kspaceFirstOrder3DC
+from kwave.kspaceFirstOrder3D import kspaceFirstOrder3DC, kspaceFirstOrder3DG
 from kwave.kWaveSimulation import SimulationOptions
 from kwave.options.simulation_execution_options import SimulationExecutionOptions
 from kwave.utils.colormap import get_color_map
@@ -22,10 +22,11 @@ from kwave.utils.signals import tone_burst
 
 c0 = 1540
 rho0 = 1000
-source_f0 = 2.7e6
+source_f0 = 2.7e6 # [Hz]
 source_amp = 1e6
 source_cycles = 5
-source_focus = 20e-3 # [m]
+# source_focus = 20e-3 # [m]
+source_focus = float('inf')
 element_num = 64
 element_width = 208e-6
 element_length = 208e-6 * 140
@@ -36,7 +37,6 @@ grid_points = kwave.data.Vector([128, 256, 128])
 grid_size_x = grid_points.x * element_pitch
 grid_size_y = grid_points.y * element_pitch
 grid_size_z = grid_points.z * element_pitch
-source_focus = -grid_size_z / 2 + source_focus
 ppw = 3
 t_end = 35e-6
 cfl = 0.5
@@ -112,7 +112,7 @@ p_max = np.reshape(sensor_data["p_max"], (Nx, Ny, Nz), order="F")
 # VISUALISATION
 plt.figure()
 plt.imshow(
-    1e-6 * p_max[:, Ny // 2, :],
+    1e-6 * p_max[Nx // 2, :, :],
     extent=[1e3 * kgrid.x_vec[0][0], 1e3 * kgrid.x_vec[-1][0], 1e3 * kgrid.z_vec[0][0], 1e3 * kgrid.z_vec[-1][0]],
     aspect="auto",
     cmap=get_color_map(),
@@ -139,6 +139,36 @@ plt.grid(True)
 plt.show()
 
 # %%
-# np.save('results/unfocused_pressure.npy', centerline_pressure)
+np.save('../results/unfocused_pressure.npy', centerline_pressure)
 # np.save('../results/focused_pressure.npy', centerline_pressure)
+
+# %%
+# %%
+focused_pressure = np.load('focused_pressure_0.02.npy')
+unfocused_pressure = np.load('unfocused_pressure.npy')
+
+# Create figure with primary y-axis
+fig, ax1 = plt.subplots()
+
+# Plot pressure data on primary y-axis
+ax1.plot(z, 1e-6 * focused_pressure, 'r-', label='Focused', linewidth=2)
+ax1.plot(z, 1e-6 * unfocused_pressure, 'k-', label='Unfocused', linewidth=2)
+ax1.set_xlabel('z-position [mm]')
+ax1.set_ylabel('Pressure [MPa]')
+ax1.grid(True)
+
+# Create secondary y-axis for the ratio
+ax2 = ax1.twinx()
+ratio = focused_pressure / unfocused_pressure
+max_ratio = np.max(ratio)
+ax2.plot(z, ratio, 'b--', label=f'Ratio (F/U) [max={max_ratio:.1f}]', linewidth=2)
+ax2.set_ylabel('Ratio (Focused/Unfocused)', color='b')
+
+# Title and legend
+plt.title('Comparison of Focused vs Unfocused Pressure')
+lines1, labels1 = ax1.get_legend_handles_labels()
+lines2, labels2 = ax2.get_legend_handles_labels()
+ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
+fig.savefig("focused_vs_unfocused.png", dpi=300, bbox_inches="tight")
+plt.show()
 # %%
