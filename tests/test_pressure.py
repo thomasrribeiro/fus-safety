@@ -3,6 +3,7 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+from pathlib import Path
 
 import kwave.data
 from kwave.kgrid import kWaveGrid
@@ -25,8 +26,8 @@ rho0 = 1000
 source_f0 = 2.7e6 # [Hz]
 source_amp = 1e6
 source_cycles = 5
-# source_focus = 20e-3 # [m]
-source_focus = float('inf')
+source_focus = 10e-3 # [m]
+# source_focus = float('inf')
 element_num = 64
 element_width = 208e-6
 element_length = 208e-6 * 140
@@ -110,6 +111,9 @@ p_max = np.reshape(sensor_data["p_max"], (Nx, Ny, Nz), order="F")
 
 # %%
 # VISUALISATION
+results_dir = Path(__file__).parent.parent / "results"
+results_dir.mkdir(exist_ok=True)
+
 plt.figure()
 plt.imshow(
     1e-6 * p_max[Nx // 2, :, :],
@@ -121,31 +125,38 @@ plt.xlabel("z-position [mm]")
 plt.ylabel("x-position [mm]")
 plt.title("Pressure Field")
 plt.colorbar(label="[MPa]")
+plt.savefig(results_dir / "pressure_field_2d.png", dpi=300, bbox_inches="tight")
+print(f"Saved: {results_dir / 'pressure_field_2d.png'}")
 plt.show()
 
 # %%
 # Extract centerline data
 centerline_index = Ny // 2
 centerline_pressure = p_max[Nx // 2, centerline_index, :]
-z_axis = 1e3 * kgrid.z_vec[0]  # Convert to mm
+z = np.arange(kgrid.Nz) * kgrid.dz
 
 # 1D plot
 plt.figure()
-plt.plot(1e-6 * centerline_pressure)
+plt.plot(z, 1e-6 * centerline_pressure)
 plt.xlabel('z-position [mm]')
 plt.ylabel('Pressure [MPa]')
 plt.title('Pressure Along Centerline')
 plt.grid(True)
+plt.savefig(results_dir / "pressure_centerline.png", dpi=300, bbox_inches="tight")
+print(f"Saved: {results_dir / 'pressure_centerline.png'}")
 plt.show()
 
 # %%
-np.save('../results/unfocused_pressure.npy', centerline_pressure)
-# np.save('../results/focused_pressure.npy', centerline_pressure)
+# Save pressure data
+# np.save(results_dir / 'unfocused_pressure.npy', centerline_pressure)
+np.save(results_dir / f'focused_pressure_{source_focus}.npy', centerline_pressure)
+print(f"Saved: {results_dir / f'focused_pressure_{source_focus}.npy'}")
 
 # %%
 # %%
-focused_pressure = np.load('focused_pressure_0.02.npy')
-unfocused_pressure = np.load('unfocused_pressure.npy')
+# Load comparison data
+focused_pressure = np.load(results_dir / f'focused_pressure_{source_focus}.npy')
+unfocused_pressure = np.load(results_dir / 'unfocused_pressure.npy')
 
 # Create figure with primary y-axis
 fig, ax1 = plt.subplots()
@@ -169,6 +180,7 @@ plt.title('Comparison of Focused vs Unfocused Pressure')
 lines1, labels1 = ax1.get_legend_handles_labels()
 lines2, labels2 = ax2.get_legend_handles_labels()
 ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
-fig.savefig("focused_vs_unfocused.png", dpi=300, bbox_inches="tight")
+fig.savefig(results_dir / f"unfocused_vs_focused_{source_focus}.png", dpi=300, bbox_inches="tight")
+print(f"Saved: {results_dir / f'unfocused_vs_focused_{source_focus}.png'}")
 plt.show()
 # %%

@@ -222,6 +222,14 @@ class kWaveDiffusion:
             return math.inf
         return -math.log(1.0 - 2.0 * reference / condition_max) / reference
 
+    @property
+    def lesion_map(self) -> np.ndarray:
+        """
+        Binary lesion map based on thermal dose threshold.
+        Returns True where CEM43 >= 240 minutes (tissue ablation threshold).
+        """
+        return self.cem43 >= 240
+
     def _fft(self, field: np.ndarray) -> np.ndarray:
         axes = tuple(range(self.dim))
         return fftn(field, axes=axes)
